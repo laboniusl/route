@@ -1,0 +1,815 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bangladesh Route Planner</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+header {
+    background: #065f46;
+    color: white;
+    padding: 25px 8%;
+}
+
+header h1 {
+    margin-bottom: 8px;
+}
+
+header p {
+    color: #d1fae5;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.panel {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px #00000010;
+    margin-bottom: 25px;
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #065f46;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+select, input, button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 15px;
+}
+
+button {
+    background: #059669;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #047857;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.actions button {
+    flex: 1;
+}
+
+.secondary {
+    background: #334155;
+}
+
+#results {
+    display: none;
+}
+
+.route-card {
+    border: 1px solid #e2e8f0;
+    padding: 18px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background: #fff;
+}
+
+.route-card.best {
+    border: 2px solid #059669;
+    background: #f0fdf4;
+}
+
+.route-card h3 {
+    margin-bottom: 12px;
+}
+
+.route-path {
+    line-height: 1.8;
+    margin-bottom: 10px;
+}
+
+.route-info {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.badge {
+    display: inline-block;
+    background: #d1fae5;
+    color: #065f46;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.map {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 20px;
+}
+
+.map-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+}
+
+.map-step span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #059669;
+    color: white;
+    font-size: 12px;
+}
+
+.map-line {
+    margin-left: 13px;
+    height: 22px;
+    border-left: 2px dashed #94a3b8;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background: #ecfdf5;
+}
+
+small {
+    color: #64748b;
+}
+
+@media(max-width: 600px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .panel {
+        padding: 18px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Bangladesh Route Planner</h1>
+    <p>Explore Bangladesh. Discover routes. Find the cheapest journey.</p>
+</header>
+
+<div class="container">
+
+    <section class="panel">
+        <h2>Plan Your Journey</h2>
+
+        <div class="form-grid">
+            <div>
+                <label for="start">Starting Place</label>
+                <select id="start"></select>
+            </div>
+
+            <div>
+                <label for="end">Destination</label>
+                <select id="end"></select>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button onclick="findAllRoutes()">
+                Find All Possible Routes
+            </button>
+
+            <button class="secondary" onclick="findShortestRoute()">
+                Find Cheapest Route
+            </button>
+        </div>
+    </section>
+
+    <section class="panel" id="results">
+        <h2 id="resultTitle">Route Results</h2>
+        <div id="resultContent"></div>
+    </section>
+
+    <section class="panel">
+        <h2>Travel Connections</h2>
+
+        <p>
+            The graph contains popular destinations in Bangladesh.
+            Each connection represents a direct travel route.
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Estimated Cost (BDT)</th>
+                </tr>
+            </thead>
+            <tbody id="connections"></tbody>
+        </table>
+
+        <small>
+            All costs are illustrative one-way estimates, not live fares.
+            Actual fares depend on transport type, operator, and travel date.
+        </small>
+    </section>
+
+    <section class="panel">
+        <h2>Add a New Connection</h2>
+
+        <div class="form-grid">
+            <div>
+                <label for="newFrom">From</label>
+                <select id="newFrom"></select>
+            </div>
+
+            <div>
+                <label for="newTo">To</label>
+                <select id="newTo"></select>
+            </div>
+
+            <div>
+                <label for="newCost">Estimated Cost (BDT)</label>
+                <input id="newCost" type="number" min="1"
+                       placeholder="Example: 500">
+            </div>
+        </div>
+
+        <div class="actions">
+            <button onclick="addConnection()">Add Connection</button>
+        </div>
+    </section>
+
+</div>
+
+<script>
+
+// ======================================
+// 1. GRAPH DATA STRUCTURE
+// ======================================
+
+// Each place is a vertex.
+// Each travel connection is an edge.
+// The edge weight represents travel cost.
+
+const graph = {
+    "Dhaka": {
+        "Chittagong": 700,
+        "Sylhet": 500,
+        "Mymensingh": 300,
+        "Rajshahi": 600,
+        "Khulna": 650
+    },
+
+    "Chittagong": {
+        "Dhaka": 700,
+        "Cox's Bazar": 500,
+        "Sylhet": 800
+    },
+
+    "Cox's Bazar": {
+        "Chittagong": 500
+    },
+
+    "Sylhet": {
+        "Dhaka": 500,
+        "Chittagong": 800,
+        "Mymensingh": 450
+    },
+
+    "Mymensingh": {
+        "Dhaka": 300,
+        "Sylhet": 450,
+        "Rangpur": 700
+    },
+
+    "Rajshahi": {
+        "Dhaka": 600,
+        "Rangpur": 500,
+        "Khulna": 700
+    },
+
+    "Khulna": {
+        "Dhaka": 650,
+        "Rajshahi": 700
+    },
+
+    "Rangpur": {
+        "Mymensingh": 700,
+        "Rajshahi": 500
+    }
+};
+
+
+// ======================================
+// 2. INITIALIZE DROPDOWN LISTS
+// ======================================
+
+const startSelect = document.getElementById("start");
+const endSelect = document.getElementById("end");
+
+function initializePlaces() {
+
+    const places = Object.keys(graph);
+
+    startSelect.innerHTML = "";
+    endSelect.innerHTML = "";
+
+    places.forEach(place => {
+
+        startSelect.add(new Option(place, place));
+        endSelect.add(new Option(place, place));
+
+    });
+
+    startSelect.value = "Dhaka";
+    endSelect.value = "Cox's Bazar";
+
+    updateConnectionDropdowns();
+    displayConnections();
+}
+
+function updateConnectionDropdowns() {
+
+    const from = document.getElementById("newFrom");
+    const to = document.getElementById("newTo");
+
+    from.innerHTML = "";
+    to.innerHTML = "";
+
+    Object.keys(graph).forEach(place => {
+        from.add(new Option(place, place));
+        to.add(new Option(place, place));
+    });
+}
+
+
+// ======================================
+// 3. FIND ALL POSSIBLE ROUTES USING DFS
+// ======================================
+
+// DFS explores every possible simple path.
+// A place cannot be repeated in one route.
+// This prevents infinite loops.
+
+function findAllRoutes() {
+
+    const start = startSelect.value;
+    const end = endSelect.value;
+
+    if (start === end) {
+        alert("Please select two different places.");
+        return;
+    }
+
+    const routes = [];
+
+    function dfs(current, path, cost) {
+
+        // Destination reached.
+        if (current === end) {
+
+            routes.push({
+                path: [...path],
+                cost: cost
+            });
+
+            return;
+        }
+
+        // Explore all connected places.
+        for (const next in graph[current]) {
+
+            // Avoid repeating a place.
+            if (!path.includes(next)) {
+
+                path.push(next);
+
+                dfs(
+                    next,
+                    path,
+                    cost + graph[current][next]
+                );
+
+                // Backtracking.
+                path.pop();
+            }
+        }
+    }
+
+    dfs(start, [start], 0);
+
+    // Sort routes by total cost.
+    routes.sort((a, b) => a.cost - b.cost);
+
+    displayRoutes(routes, start, end);
+}
+
+
+// ======================================
+// 4. SHORTEST ROUTE USING DIJKSTRA
+// ======================================
+
+// Dijkstra finds the route with minimum cost.
+// It is suitable for graphs with non-negative
+// travel costs.
+
+function dijkstra(start, end) {
+
+    const distance = {};
+    const previous = {};
+    const visited = new Set();
+
+    // Initially, all distances are infinity.
+    for (const place in graph) {
+        distance[place] = Infinity;
+        previous[place] = null;
+    }
+
+    distance[start] = 0;
+
+    while (visited.size < Object.keys(graph).length) {
+
+        let current = null;
+        let minimum = Infinity;
+
+        // Find the unvisited place with
+        // the smallest known distance.
+        for (const place in distance) {
+
+            if (
+                !visited.has(place) &&
+                distance[place] < minimum
+            ) {
+                minimum = distance[place];
+                current = place;
+            }
+        }
+
+        // No more reachable places.
+        if (current === null) {
+            break;
+        }
+
+        if (current === end) {
+            break;
+        }
+
+        visited.add(current);
+
+        // Relax all neighboring edges.
+        for (const neighbor in graph[current]) {
+
+            const cost = graph[current][neighbor];
+
+            const newDistance =
+                distance[current] + cost;
+
+            if (newDistance < distance[neighbor]) {
+
+                distance[neighbor] = newDistance;
+
+                previous[neighbor] = current;
+            }
+        }
+    }
+
+    // Destination is unreachable.
+    if (distance[end] === Infinity) {
+        return null;
+    }
+
+    // Reconstruct the shortest route.
+    const path = [];
+
+    let current = end;
+
+    while (current !== null) {
+
+        path.unshift(current);
+
+        current = previous[current];
+    }
+
+    return {
+        path: path,
+        cost: distance[end]
+    };
+}
+
+
+// ======================================
+// 5. DISPLAY SHORTEST ROUTE
+// ======================================
+
+function findShortestRoute() {
+
+    const start = startSelect.value;
+    const end = endSelect.value;
+
+    if (start === end) {
+        alert("Please select two different places.");
+        return;
+    }
+
+    const result = dijkstra(start, end);
+
+    if (!result) {
+
+        showResults(
+            "No route found",
+            "<p>No connected route exists between these places.</p>"
+        );
+
+        return;
+    }
+
+    const html = `
+        <div class="route-card best">
+
+            <span class="badge">Cheapest Route</span>
+
+            <h3>${escapeHTML(start)} → ${escapeHTML(end)}</h3>
+
+            <p class="route-path">
+                ${result.path.map(escapeHTML).join(" → ")}
+            </p>
+
+            <div class="route-info">
+                <span>
+                    <strong>Places:</strong>
+                    ${result.path.length}
+                </span>
+
+                <span>
+                    <strong>Total Cost:</strong>
+                    ৳${result.cost}
+                </span>
+            </div>
+
+            ${createMap(result.path)}
+
+        </div>
+    `;
+
+    showResults("Cheapest Route", html);
+}
+
+
+// ======================================
+// 6. DISPLAY ALL POSSIBLE ROUTES
+// ======================================
+
+function displayRoutes(routes, start, end) {
+
+    if (routes.length === 0) {
+
+        showResults(
+            "No Routes Found",
+            "<p>No connected route exists between these places.</p>"
+        );
+
+        return;
+    }
+
+    let html = `
+        <p>
+            Found <strong>${routes.length}</strong>
+            possible routes from
+            <strong>${escapeHTML(start)}</strong> to
+            <strong>${escapeHTML(end)}</strong>.
+        </p>
+        <br>
+    `;
+
+    routes.forEach((route, index) => {
+
+        const cheapest = index === 0;
+
+        html += `
+            <div class="route-card ${cheapest ? "best" : ""}">
+
+                ${cheapest
+                    ? '<span class="badge">Cheapest Route</span>'
+                    : ''
+                }
+
+                <h3>Route ${index + 1}</h3>
+
+                <p class="route-path">
+                    ${route.path.map(escapeHTML).join(" → ")}
+                </p>
+
+                <div class="route-info">
+                    <span>
+                        <strong>Places:</strong>
+                        ${route.path.length}
+                    </span>
+
+                    <span>
+                        <strong>Total Cost:</strong>
+                        ৳${route.cost}
+                    </span>
+                </div>
+
+            </div>
+        `;
+
+    });
+
+    showResults("All Possible Routes", html);
+}
+
+
+// ======================================
+// 7. CREATE SIMPLE ROUTE VISUALIZATION
+// ======================================
+
+function createMap(path) {
+
+    let html = '<div class="map">';
+
+    path.forEach((place, index) => {
+
+        html += `
+            <div class="map-step">
+                <span>${index + 1}</span>
+                <strong>${escapeHTML(place)}</strong>
+            </div>
+        `;
+
+        if (index !== path.length - 1) {
+            html += '<div class="map-line"></div>';
+        }
+    });
+
+    html += '</div>';
+
+    return html;
+}
+
+
+// ======================================
+// 8. DISPLAY RESULTS
+// ======================================
+
+function showResults(title, content) {
+
+    document.getElementById("results").style.display = "block";
+
+    document.getElementById("resultTitle").textContent = title;
+
+    document.getElementById("resultContent").innerHTML = content;
+
+    document.getElementById("results").scrollIntoView({
+        behavior: "smooth"
+    });
+}
+
+
+// ======================================
+// 9. DISPLAY GRAPH CONNECTIONS
+// ======================================
+
+function displayConnections() {
+
+    const tbody = document.getElementById("connections");
+
+    tbody.innerHTML = "";
+
+    for (const from in graph) {
+
+        for (const to in graph[from]) {
+
+            // Display each undirected edge once.
+            if (from < to) {
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${escapeHTML(from)}</td>
+                        <td>${escapeHTML(to)}</td>
+                        <td>৳${graph[from][to]}</td>
+                    </tr>
+                `;
+            }
+        }
+    }
+}
+
+
+// ======================================
+// 10. ADD NEW TRAVEL CONNECTION
+// ======================================
+
+function addConnection() {
+
+    const from = document.getElementById("newFrom").value;
+    const to = document.getElementById("newTo").value;
+
+    const cost = Number(document.getElementById("newCost").value);
+
+    if (from === to) {
+        alert("Please select two different places.");
+        return;
+    }
+
+    if (!Number.isFinite(cost) || cost <= 0) {
+        alert("Enter a valid positive travel cost.");
+        return;
+    }
+
+    // Add a bidirectional connection.
+    graph[from][to] = cost;
+    graph[to][from] = cost;
+
+    displayConnections();
+
+    document.getElementById("newCost").value = "";
+
+    alert("New travel connection added successfully!");
+}
+
+
+// ======================================
+// 11. ESCAPE USER-PROVIDED TEXT
+// ======================================
+
+function escapeHTML(value) {
+
+    return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+
+// Start the project.
+initializePlaces();
+
+</script>
+
+</body>
+</html>
